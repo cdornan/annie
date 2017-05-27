@@ -1,0 +1,8 @@
+:set -Wall
+
+:set -hide-package regex-tdfa-rc
+
+:seti -XOverloadedStrings
+:seti -XQuasiQuotes
+
+:set -isrc -itest -iapp

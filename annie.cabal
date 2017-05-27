@@ -1,0 +1,66 @@
+name:                annie
+version:             0.0.0.1
+synopsis:            Tool for anonimising textfiles
+description:         A tool for annonimising text files, rememebring the
+                     substitutions in a level-db database
+homepage:            https://github.com/githubuser/hanon#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2017 Author name here
+category:            Web
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+source-repository head
+  type:                git
+  location:            https://github.com/cdornan/annie
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Annie
+                     , Annie.Mapper
+  build-depends:       base             >= 4.7 && < 5
+                     , higher-leveldb   == 0.4.*
+                     , utf8-string      == 1.*
+                     , random-extras    == 0.19
+                     , random-fu        == 0.2.*
+                     , random-source    == 0.3.*
+                     , bytestring       == 0.10.*
+                     , regex            == 1.0.*
+                     , text
+                     , regex-tdfa       == 1.2.*
+  default-language:    Haskell2010
+  GHC-Options:        -Wall
+                      -fwarn-tabs
+
+executable annie
+  hs-source-dirs:      app
+  main-is:             annie.hs
+  build-depends:       base
+                     , annie
+                     , options          == 1.2.*
+                     , higher-leveldb   == 0.4.*
+  default-language:    Haskell2010
+  GHC-Options:        -Wall
+                      -fwarn-tabs
+                      -threaded
+                      -rtsopts
+                      -with-rtsopts=-N
+
+test-suite hanon-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , annie
+                     , bytestring       == 0.10.*
+                     , hspec
+  default-language:    Haskell2010
+  ghc-options:        -Wall
+                      -fwarn-tabs
+                      -threaded
+                      -rtsopts
+                      -with-rtsopts=-N

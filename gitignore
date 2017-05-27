@@ -2,8 +2,6 @@
 /test/hanon_mapping/
 /test/hello.txt.anon
 
-.hub
-
 dist
 dist-*
 cabal-dev
