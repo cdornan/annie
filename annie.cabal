@@ -20,8 +20,8 @@ source-repository head
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Annie
-                     , Annie.Mapper
+  exposed-modules:     HAnon.Lib
+                     , HAnon.Mapper
   build-depends:       base             >= 4.7 && < 5
                      , higher-leveldb   == 0.4.*
                      , utf8-string      == 1.*

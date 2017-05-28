@@ -1,9 +1,9 @@
-module Annie.Mapper
+module HAnon.Mapper
     ( InputPath
     , Highlighter
-    , Annie(..)
-    , stringAnnie
-    , byteStringAnnie
+    , HAnon(..)
+    , stringHAnon
+    , byteStringHAnon
     , inputPaths
     , combinedHighlighter
     , highlighters
@@ -35,8 +35,8 @@ type Highlighter = RE
 type MappingGenerator t = t -> IO t
 
 
-data Annie t =
-  Annie
+data HAnon t =
+  HAnon
     { fromStringAT    :: String -> t
     , concatAT        :: [t] -> t
     , lengthAT        :: t -> Int
@@ -49,9 +49,9 @@ data Annie t =
     , getAT           :: t -> LevelDB (Maybe t)
     }
 
-stringAnnie :: Annie String
-stringAnnie =
-  Annie
+stringHAnon :: HAnon String
+stringHAnon =
+  HAnon
     { fromStringAT    = id
     , concatAT        = concat
     , lengthAT        = length
@@ -67,9 +67,9 @@ stringAnnie =
     , getAT           = \k   -> fmap B.unpack <$> get (B.pack k)
     }
 
-byteStringAnnie :: Annie B.ByteString
-byteStringAnnie =
-  Annie
+byteStringHAnon :: HAnon B.ByteString
+byteStringHAnon =
+  HAnon
     { fromStringAT    = B.pack
     , concatAT        = B.concat
     , lengthAT        = B.length
@@ -84,7 +84,7 @@ byteStringAnnie =
     }
 
 -- | The input paths available
-inputPaths :: Annie t -> [InputPath t]
+inputPaths :: HAnon t -> [InputPath t]
 inputPaths at =
   [ (,) emailHighlighter           $ randomEmail at
   , (,) dutchPostalCodeHighlighter $ constant    at "1234AA"
@@ -121,7 +121,7 @@ namesHighlighter = mkHighlighter "[A-Z][a-z]+ +[A-Z][a-z]+"
 
 
 -- | Generate random@random.com
-randomEmail :: Annie t -> MappingGenerator t
+randomEmail :: HAnon t -> MappingGenerator t
 randomEmail at _ = do
     a <- getRandomWordAT at
     b <- getRandomWordAT at
@@ -133,7 +133,7 @@ randomEmail at _ = do
       ]
 
 -- | MappingGenerator that always results in a constant value
-constant :: Annie t -> String -> MappingGenerator t
+constant :: HAnon t -> String -> MappingGenerator t
 constant at s _ = return $ fromStringAT at s
 
 -- | Highlight helper from regex and group index to key listing
