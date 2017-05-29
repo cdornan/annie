@@ -40,7 +40,7 @@ mapFiles db_fp fps = runAnnie db_fp $ \a -> mapM_ (mapFile a) fps
 -- | Show all mappings available in the database
 listMapping :: FilePath -> IO ()
 listMapping db_fp = do
-    putStrLn "Listing dictionary"
+    putStrLn "[Annie] Listing dictionary"
     runResourceT $ do
       db   <- open db_fp dbOptions
       liftIO $ do
@@ -74,7 +74,7 @@ dbWriteOptions = def
 
 scanFile :: Annie -> FilePath -> IO ()
 scanFile a file = do
-    liftIO $ putStrLn $ "Scanning " ++ file
+    liftIO $ putStrLn $ "[Annie] Scanning " ++ file
     h <- liftIO $ openFile file ReadMode
     runOnLinesFromHandle a h
     liftIO $ hClose h
@@ -94,7 +94,7 @@ runOnLinesFromHandle a h = do
 
 mapFile :: Annie -> FilePath -> IO ()
 mapFile a inputPath = do
-    liftIO $ putStrLn $ "Mapping " ++ inputPath
+    liftIO $ putStrLn $ "[Annie] Mapping " ++ inputPath
     ifh <- liftIO $ openFile inputPath  ReadMode
     ofh <- liftIO $ openFile outputPath WriteMode
     mapLinesFromTo a ifh ofh
@@ -157,18 +157,26 @@ anonLine a mb_h ln =
     loop 0 mempty $ allMatches $ ln *=~ combinedHighlighter
   where
     loop :: Int -> B.Builder -> [Match B.ByteString] -> IO ()
-    loop bc bdr [] = putBuilder mb_h $ bdr <> B.byteString bs
+    loop bc bdr [] = do
+        putBuilder mb_h $ bdr <> B.byteString bs <> "\n"
       where
         bs = B.drop bc ln
     loop bc bdr (mtch:mtchs) = do
-        bs' <- anon a co capturedText
+        bs' <- anon a co $ capturedText cap
         loop bc' (bdr<>B.byteString pfx<>B.byteString bs') mtchs
       where
-        pfx = B.take (captureOffset-bc) $ B.drop captureOffset ln
-        bc' = captureOffset + captureLength
-        (co,Capture{..}) = case assocs $ matchArray mtch of
+        pfx = B.take (cof-bc) $ B.drop cof ln
+        bc' = cof + captureLength cap
+        cof = captureOffset cap
+        (co,cap) = case as of
           []           -> error "anonLine: the impossible happened!"
           (co_,cap_):_ -> (co_,cap_)
+        as =
+          [ (co_,cap_)
+            | (co_,cap_)<-assocs $ matchArray mtch
+            , captureOffset cap_ /= -1
+            , getCaptureOrdinal co_ /= 0
+            ]
 
 anon :: Annie -> CaptureOrdinal -> B.ByteString -> IO B.ByteString
 anon Annie{..} co bs = do

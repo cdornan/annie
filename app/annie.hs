@@ -10,16 +10,13 @@ main :: IO ()
 main = O.runCommand $ \opts args ->
   case True of
     False -> do
-      when (optScan opts) $ H.scanFiles   H.byteStringHAnon dbFilePath args
-      when (optMap opts)  $ H.mapFiles    H.byteStringHAnon dbFilePath args
-      when (optList opts) $ H.listMapping                   dbFilePath
+      when (optScan opts) $ H.scanFiles   H.byteStringHAnon "hanon_mapping" args
+      when (optMap opts)  $ H.mapFiles    H.byteStringHAnon "hanon_mapping" args
+      when (optList opts) $ H.listMapping                   "hanon_mapping"
     True  -> do
-      when (optScan opts) $ A.scanFiles                     dbFilePath args
-      when (optMap opts)  $ A.mapFiles                      dbFilePath args
-      when (optList opts) $ A.listMapping                   dbFilePath
-
-dbFilePath :: FilePath
-dbFilePath = "hanon_mapping"
+      when (optScan opts) $ A.scanFiles                     "annie_mapping" args
+      when (optMap opts)  $ A.mapFiles                      "annie_mapping" args
+      when (optList opts) $ A.listMapping                   "annie_mapping"
 
 data MainOptions = MainOptions
     { optScan :: Bool
