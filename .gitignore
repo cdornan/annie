@@ -1,5 +1,6 @@
 /.stack-work/
 hanon_mapping/
+nonah_mapping/
 annie_mapping/
 hello.txt.anon
 rabbits.txt
@@ -8,6 +9,8 @@ fox.txt
 fox.txt.anon
 goose.txt
 goose.txt.anon
+badger.txt
+badger.txt.anon
 
 .hub
 

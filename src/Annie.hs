@@ -7,6 +7,7 @@ module Annie
     ( scanFiles
     , mapFiles
     , listMapping
+    , gen
     ) where
 
 import           Control.Monad
@@ -15,6 +16,7 @@ import           Data.Monoid
 import           Data.Array
 import qualified Data.ByteString.Builder    as B
 import qualified Data.ByteString.Char8      as B
+import           Data.Char
 import           Data.Default
 import qualified Data.HashMap.Strict        as HM
 import           Data.IORef
@@ -70,6 +72,15 @@ listMapping db_fp = do
           iterNext iter
           loop iter
         _ -> releaseIter iter
+
+gen :: Int -> FilePath -> IO ()
+gen n0 ifp = do
+    ofh <- liftIO $ openFile ifp WriteMode
+    loop n0 ofh
+  where
+    loop n ofh = case n <= 0 of
+        True  -> return ()
+        False -> genRandomLine ofh >> loop (n-1) ofh
 
 annieFileLoop :: (Annie->FilePath->IO ())
               -> FilePath
@@ -230,8 +241,8 @@ anonymizers :: [(Highlighter, MappingGenerator)]
 anonymizers =
   [ (,) emailHighlighter           $ randomEmail
   , (,) dutchPostalCodeHighlighter $ constant "1234AA"
-  , (,) namesHighlighter           $ constant "Willem Wever"
-  , (,) phoneNumberHighlighter     $ constant "03012345678"
+  , (,) namesHighlighter           $ randomName
+  , (,) phoneNumberHighlighter     $ randomPhoneNumber
   ]
 
 
@@ -260,6 +271,19 @@ namesHighlighter = [re|[A-Z][a-z]+ +[A-Z][a-z]+|]
 -- MappingGenerator & the mapping genereators
 -----------------------------------------------------------------------
 
+genRandomLine :: Handle -> IO ()
+genRandomLine h = do
+    w <- randomWord
+    e <- randomEmail       ""
+    p <- randomPhoneNumber ""
+    n <- randomName        ""
+    B.hPutStrLn h $ B.unwords [w,e,p,n]
+
+
+-----------------------------------------------------------------------
+-- MappingGenerator & the mapping genereators
+-----------------------------------------------------------------------
+
 -- | Generate a new replacement from a given key
 type MappingGenerator = B.ByteString -> IO B.ByteString
 
@@ -270,12 +294,30 @@ constant s _ = return $ B.pack s
 -- | Generate random@random.com
 randomEmail :: MappingGenerator
 randomEmail _ = do
-    a <- getRandomWord
-    b <- getRandomWord
+    a <- randomWord
+    b <- randomWord
     return $ B.concat [ a, "@", b, ".com" ]
 
-getRandomWord :: IO B.ByteString
-getRandomWord = runRVar (choice someByteStringWords) DevURandom
+randomPhoneNumber :: MappingGenerator
+randomPhoneNumber _ = fmap B.pack $ runRVar mk DevURandom
+  where
+    mk = sequence $ replicate 8 $ dc <$> stdUniform
+
+    dc :: Int -> Char
+    dc i = intToDigit $ abs i `mod` 10
+
+randomName :: MappingGenerator
+randomName _ = do
+    a <- randomWord
+    b <- randomWord
+    return $ B.unwords [capse a,capse b]
+  where
+    capse x = case B.uncons x of
+      Nothing    -> x
+      Just (c,t) -> B.cons (toUpper c) t
+
+randomWord :: IO B.ByteString
+randomWord = runRVar (choice someByteStringWords) DevURandom
 
 someByteStringWords :: [B.ByteString]
 someByteStringWords = B.words

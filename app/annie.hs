@@ -5,12 +5,11 @@ module Main where
 
 import qualified Annie                      as A
 import qualified HAnon.Lib                  as H
-import           Control.Monad
 import qualified Data.ByteString.Char8      as B
 import           Data.Maybe
 import           Data.Monoid
-import qualified Options                    as O
 import           Options.Applicative        as OP
+import           Text.Read
 
 main :: IO ()
 main = do
@@ -20,46 +19,18 @@ main = do
       Scan fps -> A.scanFiles      "annie_mapping" fps
       Map  fps -> A.mapFiles       "annie_mapping" fps
       List     -> A.listMapping    "annie_mapping"
+      Gen n fp -> A.gen n fp
     HAnonStringBE ha -> case getCommand of
       Scan fps -> H.scanFiles   ha "nonah_mapping" fps
       Map  fps -> H.mapFiles    ha "nonah_mapping" fps
       List     -> H.listMapping    "nonah_mapping"
+      Gen n fp -> A.gen n fp
     HAnonBytesBE ha -> case getCommand of
       Scan fps -> H.scanFiles   ha "nonah_mapping" fps
       Map  fps -> H.mapFiles    ha "nonah_mapping" fps
       List     -> H.listMapping    "nonah_mapping"
+      Gen n fp -> A.gen n fp
 
-old_main :: IO ()
-old_main = O.runCommand $ \opts args ->
-  case AnnieBE of
-    HAnonStringBE ha -> do
-      when (optScan opts) $ H.scanFiles   ha "nonah_mapping" args
-      when (optMap opts)  $ H.mapFiles    ha "nonah_hanon_mapping" args
-      when (optList opts) $ H.listMapping    "nonah_hanon_mapping"
-    HAnonBytesBE ha -> do
-      when (optScan opts) $ H.scanFiles   ha "nonah_mapping" args
-      when (optMap opts)  $ H.mapFiles    ha "nonah_hanon_mapping" args
-      when (optList opts) $ H.listMapping    "nonah_hanon_mapping"
-    AnnieBE -> do
-      when (optScan opts) $ A.scanFiles      "annie_mapping" args
-      when (optMap opts)  $ A.mapFiles       "annie_mapping" args
-      when (optList opts) $ A.listMapping    "annie_mapping"
-
-
-data MainOptions = MainOptions
-    { optScan :: Bool
-    , optList :: Bool
-    , optMap  :: Bool
-    }
-
-instance O.Options MainOptions where
-    defineOptions = pure MainOptions
-        <*> O.simpleOption "scan" False
-              "Scan the given files to create a anonimizing translation mappings"
-        <*> O.simpleOption "list" False
-              "List all mappings"
-        <*> O.simpleOption "map" False
-              "Apply all possible mappings to the given files and output .anon versions"
 
 data CLI =
   CLI
@@ -78,6 +49,7 @@ data Command
   = Scan [FilePath]
   | Map  [FilePath]
   | List
+  | Gen  Int FilePath
   deriving (Show)
 
 cli_p :: Parser CLI
@@ -88,7 +60,7 @@ backend_p = fmap (fromMaybe AnnieBE) $
   optional
      $  b_opt "annie"              AnnieBE
     <|> b_opt "hanon-string"      (HAnonStringBE H.stringHAnon    )
-    <|> b_opt "hanon-byte-string" (HAnonBytesBE  H.byteStringHAnon)
+    <|> b_opt "hanon-bytestring"  (HAnonBytesBE  H.byteStringHAnon)
   where
     b_opt lng be =
       flag' be
@@ -99,32 +71,30 @@ backend_p = fmap (fromMaybe AnnieBE) $
 
 command_p :: Parser Command
 command_p = subparser $ foldr (<>) mempty
-    [ cmd "scan"        scn $      Scan <$> many file_arg_p
-    , cmd "map"         mpp $      Map  <$> many file_arg_p
+    [ cmd "scan"        scn $      Scan <$> many file_p
+    , cmd "map"         mpp $      Map  <$> many file_p
     , cmd "list"        lst $ pure List
+    , cmd "gen"         gnn $      Gen  <$> num_p <*> file_p
     ]
   where
     scn = "Scan files building substitution DB"
     mpp = "Anonymise files, building substitution DB"
     lst = "List the substitution DB"
+    gnn = "Generate a random file with n lines"
 
-file_arg_p :: Parser FilePath
-file_arg_p =
+file_p :: Parser FilePath
+file_p =
     argument str
       $  metavar "FILEPATH"
       <> help    "a file"
 
-parseCLI :: [String] -> IO CLI
-parseCLI =
-  handleParseResult . OP.execParserPure (prefs idm) (mkPI cli_p)
-
-pureParse :: Parser a -> [String] -> Maybe a
-pureParse p = getParseResult . execParserPure (prefs idm) (mkPI p)
-
-test_cli :: Show a => Parser a -> [String] -> IO ()
-test_cli psr ss = do
-  x <- handleParseResult $ OP.execParserPure (prefs idm) (mkPI psr) ss
-  print x
+num_p :: Parser Int
+num_p =
+    argument (eitherReader psr)
+      $  metavar "NUMBER-OF-LINES"
+      <> help    "the number of random limes to generate"
+  where
+    psr = maybe (Left "bad number syntax") Right . readMaybe
 
 mkPI :: Parser a -> ParserInfo a
 mkPI p =
