@@ -18,12 +18,8 @@ main = O.runCommand $ \opts args ->
       when (optScan opts) $ A.scanFiles                     "annie_mapping" args
       when (optMap opts)  $ A.mapFiles                      "annie_mapping" args
       when (optList opts) $ A.listMapping                   "annie_mapping"
-    TrivialBE -> do
-      when (optScan opts) $ A.scanFilesT                    "annie_mapping" args
-      when (optMap opts)  $ A.scanFilesT                    "annie_mapping" args
-      when (optList opts) $ A.listMapping                   "annie_mapping"
 
-data BackEnd = AnnieBE | HAnonBE | TrivialBE
+data BackEnd = AnnieBE | HAnonBE
 
 data MainOptions = MainOptions
     { optScan :: Bool
