@@ -51,6 +51,9 @@ data HAnon t =
     , getAT           :: t -> LevelDB (Maybe t)
     }
 
+instance Show (HAnon t) where
+  show _ = "Hanon <...>"
+
 stringHAnon :: HAnon String
 stringHAnon =
   HAnon

@@ -1,6 +1,6 @@
 :set -Wall
 
-:set -hide-package regex-tdfa-rc
+-- :set -hide-package regex-tdfa-rc
 
 :seti -XOverloadedStrings
 :seti -XQuasiQuotes
