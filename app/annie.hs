@@ -1,17 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           HAnon.Lib
+import qualified Annie                      as A
+import qualified HAnon.Lib                  as H
 import           Control.Monad
-import           Database.LevelDB.Higher
-import qualified Options                      as O
+import qualified Options                    as O
 
 main :: IO ()
 main = O.runCommand $ \opts args ->
-    runCreateLevelDB "hanon_mapping" "hanon" $ do
-        when (optScan opts) $ scanFiles   stringHAnon args
-        when (optList opts) $ listMapping stringHAnon
-        when (optMap opts)  $ mapFiles    stringHAnon args
+  case True of
+    False -> do
+      when (optScan opts) $ H.scanFiles   H.byteStringHAnon dbFilePath args
+      when (optMap opts)  $ H.mapFiles    H.byteStringHAnon dbFilePath args
+      when (optList opts) $ H.listMapping                   dbFilePath
+    True  -> do
+      when (optScan opts) $ A.scanFiles                     dbFilePath args
+      when (optMap opts)  $ A.mapFiles                      dbFilePath args
+      when (optList opts) $ A.listMapping                   dbFilePath
+
+dbFilePath :: FilePath
+dbFilePath = "hanon_mapping"
 
 data MainOptions = MainOptions
     { optScan :: Bool

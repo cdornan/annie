@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes                #-}
+
 module HAnon.Mapper
     ( InputPath
     , Highlighter
@@ -108,16 +110,16 @@ highlighters = map fst $ inputPaths urk
 
 -- |Highlight any x@x.x string
 emailHighlighter :: Highlighter
-emailHighlighter = mkHighlighter "\\S+@\\S+\\.\\S+"
+emailHighlighter = [re|[^[:space:]]+@[^[:space:]]+\.[^[:space:]]+|]
 
 dutchPostalCodeHighlighter :: Highlighter
-dutchPostalCodeHighlighter = mkHighlighter "[0-9]{4} *[A-Za-z]{2}"
+dutchPostalCodeHighlighter = [re|[0-9]{4} *[A-Za-z]{2}|]
 
 phoneNumberHighlighter :: Highlighter
-phoneNumberHighlighter = mkHighlighter "[+]?[0-9]{8,13}"
+phoneNumberHighlighter = [re|[+]?[0-9]{8,13}|]
 
 namesHighlighter :: Highlighter
-namesHighlighter = mkHighlighter "[A-Z][a-z]+ +[A-Z][a-z]+"
+namesHighlighter = [re|[A-Z][a-z]+ +[A-Z][a-z]+|]
 
 
 -- | Generate random@random.com
@@ -135,12 +137,6 @@ randomEmail at _ = do
 -- | MappingGenerator that always results in a constant value
 constant :: HAnon t -> String -> MappingGenerator t
 constant at s _ = return $ fromStringAT at s
-
--- | Highlight helper from regex and group index to key listing
-mkHighlighter :: String -> Highlighter
-mkHighlighter re_s = fromMaybe urk $ compileRegex re_s
-  where
-    urk = error $ "mkHighlighter: bad RE syntax: " ++ re_s
 
 someByteStringWords :: [B.ByteString]
 someByteStringWords = B.words $ B.pack sampleWords

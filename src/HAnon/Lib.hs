@@ -22,22 +22,27 @@ import           System.IO
 
 
 -- | Open each of the files and create translations for each candidate
-scanFiles :: HAnon t -> [FilePath] -> LevelDB ()
-scanFiles at = mapM_ $ scanFile at
+scanFiles :: HAnon t -> FilePath -> [FilePath] -> IO ()
+scanFiles at db_fp fps = runCreateLevelDB db_fp bucket $
+  mapM_ (scanFile at) fps
 
 -- | Map each of the argument files
-mapFiles :: HAnon t -> [FilePath] -> LevelDB ()
-mapFiles at = mapM_ $ mapFile at
+mapFiles :: HAnon t -> FilePath -> [FilePath] -> IO ()
+mapFiles at db_fp fps = runCreateLevelDB db_fp bucket $
+  mapM_ (mapFile at) fps
 
 -- | Show all mappings available in the database
-listMapping :: HAnon t -> LevelDB ()
-listMapping _ = do
+listMapping :: FilePath -> IO ()
+listMapping db_fp = runCreateLevelDB db_fp bucket $ do
     liftIO $ putStrLn "Listing dictionary"
     lns <- scan (B.fromString "")
       queryList
         { scanMap = \(key, value) -> BS.intercalate ":" [key, value]
         }
     liftIO $ mapM_ BS.putStrLn lns
+
+bucket :: KeySpace
+bucket = "hanon"
 
 
 -----------------------------------------------------------------------
