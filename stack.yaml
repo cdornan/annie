@@ -5,4 +5,4 @@ packages:
 extra-deps:
 - higher-leveldb-0.4.0.0
 - random-extras-0.19
-resolver: lts-8.15
+resolver: nightly-2017-05-28

@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE BangPatterns               #-}
 
 module Annie
     ( scanFiles
     , mapFiles
     , listMapping
+    , scanFilesT
     ) where
 
 import           Control.Monad
@@ -28,6 +30,7 @@ import           System.IO
 import           Text.RE.Replace
 import           Text.RE.TDFA
 
+infixl 6 <%>
 
 -- | Open each of the files and create translations for each candidate
 scanFiles :: FilePath -> [FilePath] -> IO ()
@@ -69,6 +72,32 @@ dbWriteOptions = def
 
 
 -----------------------------------------------------------------------
+-- scanFilesT
+-----------------------------------------------------------------------
+
+scanFilesT :: FilePath -> [FilePath] -> IO ()
+scanFilesT _ fps = mapM_ scanFileT fps
+
+scanFileT :: FilePath -> IO ()
+scanFileT fp = do
+    liftIO $ putStrLn $ "[Trivial] Scanning " ++ fp
+    h <- liftIO $ openFile fp ReadMode
+    n <- scanT h 0
+    liftIO $ putStrLn $ fp ++ ": " ++ show n
+    liftIO $ hClose h
+
+scanT :: Handle -> Int -> IO Int
+scanT h (!n) = do
+    eof <- liftIO $ hIsEOF h
+    case eof of
+      True  -> return n
+      False -> do
+        ln <- liftIO $ B.pack <$> hGetLine h
+        let m = countMatches $ ln *=~ combinedHighlighter
+        scanT h $ n+m
+
+
+-----------------------------------------------------------------------
 -- scanFile
 -----------------------------------------------------------------------
 
@@ -83,7 +112,7 @@ runOnLinesFromHandle :: Annie -> Handle -> IO ()
 runOnLinesFromHandle a h = do
     isoef <- liftIO $ hIsEOF h
     unless isoef $ do
-      ln <- liftIO $ B.hGetLine h
+      ln <- liftIO $ B.pack <$> hGetLine h
       anonLine a Nothing ln
       runOnLinesFromHandle a h
 
@@ -107,7 +136,7 @@ mapLinesFromTo :: Annie -> Handle -> Handle -> IO ()
 mapLinesFromTo a ifh ofh = do
     iseof <- liftIO $ hIsEOF ifh
     unless iseof $ do
-        ln <- liftIO $ B.hGetLine ifh
+        ln <- liftIO $ B.pack <$> hGetLine ifh
         anonLine a (Just ofh) ln
         mapLinesFromTo a ifh ofh
 
@@ -154,18 +183,22 @@ runAnnie db_fp f = runResourceT $ do
 
 anonLine :: Annie -> Maybe Handle -> B.ByteString -> IO ()
 anonLine a mb_h ln =
-    loop 0 mempty $ allMatches $ ln *=~ combinedHighlighter
+    loop 0 mb_b $ allMatches $ ln *=~ combinedHighlighter
   where
-    loop :: Int -> B.Builder -> [Match B.ByteString] -> IO ()
-    loop bc bdr [] = do
-        putBuilder mb_h $ bdr <> B.byteString bs <> "\n"
+    mb_b :: Maybe B.Builder
+    mb_b = const mempty <$> mb_h
+
+    loop :: Int -> Maybe B.Builder -> [Match B.ByteString] -> IO ()
+    loop bc mb [] = do
+        putBuilder mb_h $ mb <%> build bs <%> "\n"
       where
         bs = B.drop bc ln
-    loop bc bdr (mtch:mtchs) = do
+    loop bc mb (mtch:mtchs) = do
+        print (bc,cof,captureLength cap,capturedText cap)
         bs' <- anon a co $ capturedText cap
-        loop bc' (bdr<>B.byteString pfx<>B.byteString bs') mtchs
+        loop bc' (mb<%>build pfx<%>build bs') mtchs
       where
-        pfx = B.take (cof-bc) $ B.drop cof ln
+        pfx = segment bc (cof-bc) ln
         bc' = cof + captureLength cap
         cof = captureOffset cap
         (co,cap) = case as of
@@ -177,6 +210,10 @@ anonLine a mb_h ln =
             , captureOffset cap_ /= -1
             , getCaptureOrdinal co_ /= 0
             ]
+
+(<%>) :: Maybe B.Builder -> B.Builder -> Maybe B.Builder
+(<%>)  Nothing   _   = Nothing
+(<%>) (Just bu0) bu1 = Just $ bu0<>bu1
 
 anon :: Annie -> CaptureOrdinal -> B.ByteString -> IO B.ByteString
 anon Annie{..} co bs = do
@@ -234,8 +271,17 @@ captureNameSupply = concat
     , [ 'c':show i | i<-[0..] :: [Int] ]
     ]
 
-putBuilder :: Maybe Handle -> B.Builder -> IO ()
-putBuilder = maybe (const $ return ()) B.hPutBuilder
+segment :: Int -> Int -> B.ByteString -> B.ByteString
+segment st ln = B.take ln . B.drop st
+
+putBuilder :: Maybe Handle -> Maybe B.Builder -> IO ()
+putBuilder mb_h mb_b = fromMaybe (return ()) $ do
+    h <- mb_h
+    b <- mb_b
+    return $ B.hPutBuilder h b
+
+build :: B.ByteString -> B.Builder
+build = B.byteString
 
 
 -----------------------------------------------------------------------
@@ -247,7 +293,8 @@ type Highlighter = RE
 
 -- |Highlight any x@x.x string
 emailHighlighter :: Highlighter
-emailHighlighter = [re|[^[:space:]]+@[^[:space:]]+\.[^[:space:]]+|]
+-- emailHighlighter = [re|[^[:space:]]+@[^[:space:]]+\.[^[:space:]]+|]
+emailHighlighter = [re|\S+@\S+\.\S+|]
 
 dutchPostalCodeHighlighter :: Highlighter
 dutchPostalCodeHighlighter = [re|[0-9]{4} *[A-Za-z]{2}|]

@@ -1,9 +1,13 @@
 /.stack-work/
-/test/hanon_mapping/
-/test/annie_mapping/
-/test/hello.txt.anon
+hanon_mapping/
+annie_mapping/
+hello.txt.anon
 rabbits.txt
 rabbits.txt.anon
+fox.txt
+fox.txt.anon
+goose.txt
+goose.txt.anon
 
 .hub
 
